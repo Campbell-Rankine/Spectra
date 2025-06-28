@@ -8,11 +8,11 @@ WORKDIR $WD
 
 FROM base AS install_dependencies
 # install dependencies
-RUN apt-get update -y && apt install -y cmake git libglew-dev libpango1.0-dev pkg-config
+RUN apt-get update -y && apt install -y cmake git libglew-dev libpango1.0-dev pkg-config nasm
 
 # install ffmpeg
 WORKDIR $WD/bin
-RUN git clone git@github.com:FFmpeg/FFmpeg.git
+RUN git clone https://github.com/FFmpeg/FFmpeg.git
 WORKDIR $WD/bin/FFmpeg
 RUN ./configure
 RUN make -j4
