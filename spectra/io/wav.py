@@ -10,10 +10,15 @@ class WavReader:
         assert os.path.exists(path)
         self.path = path
 
-    def __call__(self, as_stream: Optional[bool] = False):
-        match as_stream:
-            case False:
-                samplerate, data = wavfile.read(self.path)
-                return samplerate, data
-            case _:
-                raise ValueError(f"Invalid stream input")
+    def __call__(self):
+        samplerate, data = wavfile.read(self.path)
+        return samplerate, data
+    
+class WavStreamReader(WavReader):
+    backend: str = "..." # TODO: Find wav streaming
+
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+
+    def read(self):
+        raise NotImplementedError

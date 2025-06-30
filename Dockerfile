@@ -14,7 +14,7 @@ RUN apt-get update -y && apt install -y cmake git libglew-dev libpango1.0-dev pk
 WORKDIR $WD/bin
 RUN git clone https://github.com/FFmpeg/FFmpeg.git
 WORKDIR $WD/bin/FFmpeg
-RUN ./configure
+RUN $WD/bin/FFmpeg/configure
 RUN make -j4
 RUN make install
 WORKDIR $WD
@@ -27,4 +27,12 @@ RUN set -ex && \
     conda config --set always_yes yes --set changeps1 no && \
     conda info -a && \
     conda config --add channels conda-forge && \
-    conda install --quiet --freeze-installed -c main conda-pack
+    conda install --quiet --freeze-installed -c main conda-pack pip python=3.11
+
+COPY ./requirements.txt $WD/requirements.txt
+RUN pip3 install -r $WD/requirements.txt
+
+FROM python_dependencies AS hot_reload
+COPY . $WD/
+
+ENTRYPOINT [ "bash" ]

@@ -1,0 +1,10 @@
+services:
+  spectra:
+    image: spectra_services
+    build: 
+      context: .
+      dockerfile: ./Dockerfile
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    volumes:
+      - "./bin/:/root/spectra/bin/"
