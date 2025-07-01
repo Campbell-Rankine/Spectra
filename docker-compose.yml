@@ -8,3 +8,4 @@ services:
     tty: true        # docker run -t
     volumes:
       - "./bin/:/root/spectra/bin/"
+      - "./output/:/root/spectra/output/"

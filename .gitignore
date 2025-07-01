@@ -5,10 +5,12 @@ __pycache__/
 
 # C extensions
 *.so
-
+*.mp4
 # Distribution / packaging
 .Python
 build/
+/test_data
+/output
 develop-eggs/
 dist/
 downloads/

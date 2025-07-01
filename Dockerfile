@@ -8,7 +8,7 @@ WORKDIR $WD
 
 FROM base AS install_dependencies
 # install dependencies
-RUN apt-get update -y && apt install -y cmake git libglew-dev libpango1.0-dev pkg-config nasm
+RUN apt-get update -y && apt install -y cmake git pkg-config libsdl-pango-dev libglew-dev libpango1.0-dev pkg-config nasm
 
 # install ffmpeg
 WORKDIR $WD/bin
@@ -34,5 +34,6 @@ RUN pip3 install -r $WD/requirements.txt
 
 FROM python_dependencies AS hot_reload
 COPY . $WD/
+RUN chmod +X /root/spectra/spectra/entrypoint.sh
 
-ENTRYPOINT [ "bash" ]
+CMD [ "bash", "-c", "/root/spectra/spectra/entrypoint.sh" ]
