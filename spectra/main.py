@@ -1,7 +1,9 @@
 from manim import *
 
 config.flush_cache = True
-config.media_dir = "/root/spectra/output"
+config.media_dir = "./output"
+
+
 class DefaultTemplate(Scene):
     def construct(self):
         circle = Circle()  # create a circle

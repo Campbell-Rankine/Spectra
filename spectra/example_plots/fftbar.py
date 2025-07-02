@@ -6,6 +6,7 @@ config.media_dir = "/root/spectra/output"
 from manim import *
 import numpy as np
 
+
 class FFTBarChart(Scene):
     def construct(self):
         # Generate a time-domain signal: sum of two sine waves
@@ -15,10 +16,10 @@ class FFTBarChart(Scene):
 
         # Compute FFT and magnitude
         fft_vals = np.fft.fft(signal)
-        fft_mags = np.abs(fft_vals)[:N // 2]  # Only positive frequencies
+        fft_mags = np.abs(fft_vals)[: N // 2]  # Only positive frequencies
 
         # Normalize and select frequencies for display
-        freqs = np.fft.fftfreq(N, d=t[1] - t[0])[:N // 2]
+        freqs = np.fft.fftfreq(N, d=t[1] - t[0])[: N // 2]
         fft_mags /= np.max(fft_mags)  # normalize for bar height
 
         # Convert to BarChart input
@@ -47,9 +48,11 @@ class FFTBarChart(Scene):
 
         self.wait()
 
+
 from manim import *
 import numpy as np
 import librosa
+
 
 class AudioFFTVisualizer(Scene):
     def construct(self):
@@ -71,7 +74,7 @@ class AudioFFTVisualizer(Scene):
             bar = Rectangle(
                 width=0.2, height=0.1, fill_color=BLUE, fill_opacity=0.8, stroke_width=0
             )
-            bar.move_to(LEFT * (n_bins/2 - i) * spacing + DOWN * 2)
+            bar.move_to(LEFT * (n_bins / 2 - i) * spacing + DOWN * 2)
             bars.add(bar)
 
         self.add(bars)
