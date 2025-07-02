@@ -1,8 +1,7 @@
 numpy
 pandas
+configparser
+pyaudio
 scipy
 scikit-learn
 manim
-librosa
-pyaudio
-wave

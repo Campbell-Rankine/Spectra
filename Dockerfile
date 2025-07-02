@@ -9,8 +9,7 @@ WORKDIR $WD
 FROM base AS install_dependencies
 # install dependencies
 RUN apt-get update -y && apt install -y cmake git pkg-config libsdl-pango-dev libglew-dev libpango1.0-dev \
-                    pkg-config nasm texlive-latex-base portaudio19-dev python3-pyaudio libasound2-plugins
-
+                    pkg-config nasm texlive-latex-base portaudio19-dev python3-pyaudio libasound2-plugins 
 # install ffmpeg
 WORKDIR $WD/bin
 RUN git clone https://github.com/FFmpeg/FFmpeg.git
@@ -37,4 +36,4 @@ FROM python_dependencies AS hot_reload
 COPY . $WD/
 RUN chmod +X /root/spectra/spectra/entrypoint.sh
 
-CMD [ "bash", "/root/spectra/spectra/entrypoint.sh" ]
+CMD [ "python3", "/root/spectra/client.py" ]

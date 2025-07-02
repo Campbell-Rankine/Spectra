@@ -6,6 +6,7 @@ services:
       dockerfile: ./Dockerfile
     stdin_open: true # docker run -i
     tty: true        # docker run -t
+    network_mode: host
     volumes:
       - "./bin/:/root/spectra/bin/"
       - "./output/:/root/spectra/output/"

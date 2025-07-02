@@ -5,6 +5,8 @@ import time
 import logging
 from timeit import default_timer as timer
 
+from buffer import BufferedAudioRecorder
+
 
 def parse_arg() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -17,7 +19,7 @@ def parse_arg() -> argparse.Namespace:
         metavar="chunk size",
         type=int,
         default=2048,
-        help="Streaming chunk size",
+        help="Streaming chunk size (default = 2048)",
     )
 
     parser.add_argument(
@@ -27,8 +29,41 @@ def parse_arg() -> argparse.Namespace:
         metavar="rate",
         type=int,
         default=44100,
-        help="Streaming sample rate",
+        help="Streaming sample rate (default = 44100hz)",
     )
+
+    parser.add_argument(
+        "-a",
+        "--address",
+        dest="address",
+        metavar="address",
+        type=str,
+        default="0.0.0.0",
+        help="Streaming http address (default = 0.0.0.0)",
+    )
+
+    parser.add_argument(
+        "-p",
+        "--port",
+        dest="port",
+        metavar="port",
+        type=int,
+        default=12345,
+        help="Streaming port (default = 12345)",
+    )
+
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        dest="timeout",
+        metavar="timeout",
+        type=int,
+        default=180,
+        help="Streaming socket connect timeout (default = 3mins)",
+    )
+
+    args = parser.parse_args()
+    return args
 
 
 def init_logger():
@@ -52,42 +87,63 @@ def init_logger():
 if __name__ == "__main__":
     # boot server
     start = timer()
+    args = parse_arg()
     logger = init_logger()
 
     # load initial data so we can accept a keyboard interrupt at any time
     conn = None
     stream = None
 
-    print("Available input devices:")
+    # select audio devices
+    logger.info("[SERVER] Available input devices:")
     p = pyaudio.PyAudio()
     for i in range(p.get_device_count()):
         info = p.get_device_info_by_index(i)
         if info["maxInputChannels"] > 0:
             logger.info(
-                f"Index {i}: {info['name']} ({info['maxInputChannels']} channels)"
+                f"[SERVER] Index {i}: {info['name']} ({info['maxInputChannels']} channels)"
             )
-
     device_index = None
-    try:
-        device_index = int(input("Please select an input device index: ..."))
-    except KeyboardInterrupt:
-        logger.info(f"Stopped!")
+    device_index = int(
+        input("[SERVER] Please select an input device index: ...\nDevice: ")
+    )
 
+    # tcp connection
     assert not device_index is None
-    logger.info(f"Using device={p.get_device_info_by_index(i)['name']}")
+    logger.info(f"[SERVER] Using device={p.get_device_info_by_index(i)['name']}")
+
+    # open buffered recording object
+    recorder = BufferedAudioRecorder(
+        rate=args.rate, chunk_size=args.chunk_size, device_index=device_index
+    )  # Replace with your line-in index
+    recorder.open()
+
+    # open socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind((args.address, args.port))
+    sock.listen(1)
+
+    try:
+        print(f"[SERVER] Waiting for connection on port {args.port}...")
+        conn, addr = sock.accept()
+        print(f"[SERVER] Connected to {addr}")
+    except KeyboardInterrupt:
+        logger.info(f"Stopping")
 
     counter = 0
     try:
+        assert not stream is None
         while True:
-            logger.info(f"Running stream for {counter} seconds")
-            counter += 1
-            time.sleep(1)
+            if recorder.live_buffer:
+                chunk = recorder.get_latest_chunk()
+                conn.sendall(chunk)
+                counter += 1
     except KeyboardInterrupt:
-        logger.info(f"Stopped!")
+        logger.info(f"[SERVER] Stopped! Streamed {counter} audio chunks!")
     finally:
         end = timer()
         logger.info(
-            f"Shutting TCP connection down, stream lasted {round(end-start, 2)} seconds"
+            f"[SERVER] Shutting TCP connection down, stream lasted {round(end-start, 2)} seconds"
         )
         if conn is None or stream is None:
             pass
