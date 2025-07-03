@@ -124,7 +124,7 @@ import numpy as np
 
 
 class TCPAudioStream:
-    def __init__(self, host="0.0.0.0", port=12345, chunk_size=2048):
+    def __init__(self, host="host.docker.internal", port=12345, chunk_size=2048):
         self.chunk = chunk_size
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((host, port))

@@ -113,10 +113,10 @@ if __name__ == "__main__":
     logger.info(f"[SERVER] Using device={p.get_device_info_by_index(i)['name']}")
 
     # open buffered recording object
-    recorder = BufferedAudioRecorder(
+    stream = BufferedAudioRecorder(
         rate=args.rate, chunk_size=args.chunk_size, device_index=device_index
     )  # Replace with your line-in index
-    recorder.open()
+    stream.open()
 
     # open socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -132,14 +132,18 @@ if __name__ == "__main__":
 
     counter = 0
     try:
-        assert not stream is None
         while True:
-            if recorder.live_buffer:
-                chunk = recorder.get_latest_chunk()
+            if stream.live_buffer:
+                chunk = stream.get_latest_chunk()
                 conn.sendall(chunk)
                 counter += 1
-    except KeyboardInterrupt:
-        logger.info(f"[SERVER] Stopped! Streamed {counter} audio chunks!")
+    except Exception as e:
+        logger.info(
+            f"[SERVER] Stopped! Streamed {counter} audio chunks! Exception: {e}"
+        )
+        conn.close()
+        stream.close()
+        p.terminate()
     finally:
         end = timer()
         logger.info(
@@ -149,6 +153,5 @@ if __name__ == "__main__":
             pass
         else:
             conn.close()
-            stream.stop_stream()
             stream.close()
             p.terminate()
