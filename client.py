@@ -4,8 +4,6 @@ import logging
 import time
 import pyaudio
 
-stream = TCPAudioStream()
-
 
 def init_logger():
     logging.basicConfig(
@@ -27,6 +25,8 @@ def init_logger():
 
 if __name__ == "__main__":
     logger = init_logger()
+
+    stream = TCPAudioStream()
 
     while True:
         try:
