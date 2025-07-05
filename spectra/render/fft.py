@@ -28,8 +28,9 @@ class FFTFileVisualizer(Scene):
         self,
         path: str,
         max_height: Optional[int] = 6,
-        frames_per_second: Optional[int] = 60,
+        frames_per_second: Optional[int] = 30,
         smoothing: Optional[float] = 0.2,
+        opacity: Optional[float] = 0.85,
         **kw,
     ):
         super().__init__(**kw)
@@ -37,6 +38,7 @@ class FFTFileVisualizer(Scene):
         self.max_h = max_height
         self.frames_per_second = frames_per_second
         self.smoothing = smoothing
+        self.opacity = opacity
         self.animate_counter: int = 0
 
     def log(self, msg: str, level: str):
@@ -50,7 +52,7 @@ class FFTFileVisualizer(Scene):
         self.__setattr__(name, object)
 
     def color_for_amplitude(self, val):
-        return color_gradient([BLUE, GREEN, RED], int(val))
+        return color_gradient([RED, BLUE], int(val))
 
     def construct(self):
         # Load and process audio
@@ -69,23 +71,10 @@ class FFTFileVisualizer(Scene):
         )
 
         # convert audio samples to log space for better alignment with human hearing
-        min_freq = 20
-        max_freq = rate / 2
-        num_log_bins = 80
-
-        # create log space
-        log_freqs = np.logspace(
-            np.log10(min_freq), np.log10(max_freq), num=num_log_bins
-        )
-
-        def fft_to_log_bins(fft, freqs, log_freqs):
-            interp = interp1d(freqs, fft, bounds_error=False, fill_value=0.0)
-            return interp(log_freqs)
-
-        fft_frames = [fft_to_log_bins(fft, freqs, log_freqs) for fft in fft_frames]
+        num_bins = len(freqs)
 
         # --- Frequency Bins ---
-        trackers = [ValueTracker(0.1) for _ in range(num_log_bins)]
+        trackers = [ValueTracker(0.1) for _ in range(num_bins)]
 
         # Create bars for initial frame
         bars = VGroup()
@@ -103,12 +92,10 @@ class FFTFileVisualizer(Scene):
         self.add(bars)
 
         # Animate Frames
-        for fft in fft_frames[::2]:
+        for fft in fft_frames[::2]:  # downsample for speed
+            # Normalize heights
             norm = np.clip(fft / np.max(fft), 0, 1)
-            for tracker, h in zip(trackers, norm):
-                target = np.clip(h * self.max_h, 0.1, self.max_h)
-                smoothed = (
-                    1 - self.smoothing
-                ) * target + self.smoothing * tracker.get_value()
-                tracker.set_value(smoothed)
-            self.wait(1 / self.frames_per_second)
+            for bar, h in zip(bars, norm):
+                bar.scale_to_fit_height(h * self.max_h)
+                bar.move_to([bar.get_x(), bar.get_y(), 0]).align_to(ORIGIN, DOWN)
+            self.wait(1 / self.frames_per_second)  # 30 FPS

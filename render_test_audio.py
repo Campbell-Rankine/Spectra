@@ -35,7 +35,7 @@ if __name__ == "__main__":
         }
     ):
         # construct scene object
-        scene = FFTFileVisualizer(path=path, max_height=5)
+        scene = FFTFileVisualizer(path=path, max_height=4)
         scene.register("logger", logger)
 
         # render
