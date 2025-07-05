@@ -25,7 +25,7 @@ class AudioIO:
     def __normalize(self, samples):
         if not isinstance(samples, np.ndarray):
             samples = np.asarray(samples, self.dtype)
-        samples /= np.max(samples)
+        samples /= np.max(np.abs(samples))
         return samples
 
     def read(self, verbose=False):
