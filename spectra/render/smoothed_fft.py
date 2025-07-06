@@ -36,6 +36,7 @@ class FFTFileVisualizer(Scene):
         opacity: Optional[float] = 0.85,
         spacing: Optional[float] = 0.025,
         downsampling: Optional[int] = 2,
+        interpolation_frames: Optional[int] = 3,
         **kw,
     ):
         super().__init__(**kw)
@@ -47,6 +48,7 @@ class FFTFileVisualizer(Scene):
         self.spacing = spacing
         self.colormap = cm.get_cmap("plasma")
         self.downsample = downsampling
+        self.interpolation_frames = interpolation_frames
         self.animate_counter: int = 0
 
     def log(self, msg: str, level: str):
@@ -123,10 +125,25 @@ class FFTFileVisualizer(Scene):
         center_line = Line(LEFT * 10, RIGHT * 10, color=WHITE, stroke_opacity=0.2)
         self.add(center_line)
 
-        # Animate Frames
-        for fft in fft_frames[:: self.downsample]:  # downsample for speed
-            # Normalize heights
-            norm = np.clip(fft / np.max(fft), 0, 1)
-            for tracker, val in zip(trackers, norm):
-                tracker.set_value(val * self.max_h)
-            self.wait(1 / self.frames_per_second)  # 30 FPS
+        # Smoothing: interpolate between frames
+        smoothed_fft_frames = []
+        for i in range(len(fft_frames) - 1):
+            current = fft_frames[i]
+            next_frame = fft_frames[i + 1]
+            # Interpolate N steps between frames
+            for alpha in np.linspace(
+                0, 1, self.interpolation_frames
+            ):  # change to control smoothness
+                interp = (1 - alpha) * current + alpha * next_frame
+                smoothed_fft_frames.append(interp)
+
+        # Animate the interpolated frames
+        for fft in smoothed_fft_frames[
+            :: self.downsample
+        ]:  # can reduce speed by adjusting step
+            norm = np.clip(fft / self.max_amp, 0, 1)
+            anims = [
+                tracker.animate.set_value(val * self.max_h)
+                for tracker, val in zip(trackers, norm)
+            ]
+            self.play(*anims, run_time=1 / self.frames_per_second, rate_func=smooth)

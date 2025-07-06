@@ -1,3 +1,4 @@
+import sys
 import os
 import numpy
 from timeit import default_timer as timer
@@ -9,8 +10,8 @@ from spectra.utils import AudioAttachment
 from spectra.render.fft import FFTFileVisualizer
 
 # only to be used on docker
-path_ = "/root/spectra/test_data/jigsaw-3-parts.wav"
-path2 = "./test_data/jigsaw-3-parts.wav"
+path_ = "/root/spectra/test_data/Jigsaw.wav"
+path2 = "./test_data/Jigsaw.wav"
 
 if __name__ == "__main__":
     start = timer()
@@ -36,17 +37,21 @@ if __name__ == "__main__":
         }
     ):
         # construct scene object
-        scene = FFTFileVisualizer(path=path, max_height=4)
+        scene = FFTFileVisualizer(
+            path=path, max_height=2.5, frames_per_second=30, downsampling=4
+        )
         scene.register("logger", logger)
 
         # render
         scene.render()
 
     # attach audio to video
-    editor = AudioAttachment(output_path + ".mp4", path)
+    editor = AudioAttachment(output_path + "-render.mp4", path)
     editor.attach()
 
     end = timer()
     logger.info(f"Rendering Scene Took {round(end-start, 2)} seconds")
 
     del editor
+    os.remove("./output/video/partial_movie_files")
+    sys.exit(0)
