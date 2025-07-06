@@ -96,28 +96,16 @@ class FFTFileVisualizer(Scene):
         # Create bars for initial frame
         bars = VGroup()
         for i, tracker in enumerate(trackers):
-
-            def make_top_bar(t=tracker):
-                return always_redraw(
-                    lambda: Rectangle(width=0.02, height=t.get_value())
-                    .set_fill(self.color_for_amplitude(t.get_value()), self.opacity)
-                    .set_stroke(width=0)
-                    .align_to(ORIGIN, DOWN)
-                    .shift(RIGHT * i * self.spacing)
+            bar = always_redraw(
+                lambda t=tracker, i=i: Rectangle(width=0.01, height=t.get_value())
+                .set_fill(
+                    self.color_for_amplitude(t.get_value() / self.max_h),
+                    self.opacity,
                 )
-
-            def make_bottom_bar(t=tracker):
-                return always_redraw(
-                    lambda: Rectangle(width=0.02, height=t.get_value())
-                    .set_fill(
-                        self.inverted_color_for_amplitude(t.get_value()), self.opacity
-                    )
-                    .set_stroke(width=0)
-                    .align_to(ORIGIN, UP)
-                    .shift(RIGHT * i * self.spacing)
-                )
-
-            bars.add(make_top_bar(), make_bottom_bar())
+                .set_stroke(width=0)
+                .align_to(ORIGIN, DOWN)
+            )
+            bars.add(bar)
 
         bars.move_to(ORIGIN)
         self.add(bars)
@@ -138,12 +126,11 @@ class FFTFileVisualizer(Scene):
                 smoothed_fft_frames.append(interp)
 
         # Animate the interpolated frames
-        for fft in smoothed_fft_frames[
-            :: self.downsample
-        ]:  # can reduce speed by adjusting step
-            norm = np.clip(fft / self.max_amp, 0, 1)
-            anims = [
-                tracker.animate.set_value(val * self.max_h)
-                for tracker, val in zip(trackers, norm)
-            ]
-            self.play(*anims, run_time=1 / self.frames_per_second, rate_func=smooth)
+        for fft in smoothed_fft_frames[:: self.downsample]:  # downsample for speed
+            # Normalize heights
+            norm = np.clip(fft / np.max(fft), 0, 1)
+            for bar, h in zip(bars, norm):
+                bar.scale_to_fit_height(h)
+                bar.set_fill(self.color_for_amplitude(h))
+                bar.move_to([bar.get_x(), bar.get_y(), 0]).align_to(ORIGIN, DOWN)
+            self.wait(1 / self.frames_per_second)  # 30 FPS

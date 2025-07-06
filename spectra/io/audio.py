@@ -11,14 +11,14 @@ class AudioIO:
         self,
         path: str,
         target_sample_rate: Optional[int] = 44100,
-        num_channels: Optional[int] = 2,
+        mono: Optional[bool] = True,
         normalize: Optional[bool] = True,
         dtype: Optional[Any] = np.float32,
     ):
         assert os.path.exists(path)
         self.path = path
         self.sample_rate = target_sample_rate
-        self.num_channels = num_channels
+        self.mono = mono
         self.normalize = normalize
         self.dtype = dtype
 
@@ -30,7 +30,10 @@ class AudioIO:
 
     def read(self, verbose=False):
         audio = AudioSegment.from_file(self.path)
-        audio = audio.set_channels(1).set_frame_rate(self.sample_rate)
+        if self.mono:
+            audio = audio.set_channels(1).set_frame_rate(self.sample_rate)
+        else:
+            audio = audio.set_frame_rate(self.sample_rate)
         samples = np.array(audio.get_array_of_samples()).astype(np.float32)
 
         if self.normalize:

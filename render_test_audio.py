@@ -10,8 +10,8 @@ from spectra.utils import AudioAttachment
 from spectra.render.fft import FFTFileVisualizer
 
 # only to be used on docker
-path_ = "/root/spectra/test_data/Jigsaw.wav"
-path2 = "./test_data/Jigsaw.wav"
+path_ = "/root/spectra/test_data/jigsaw-3-parts.wav"
+path2 = "./test_data/jigsaw-3-parts.wav"
 
 if __name__ == "__main__":
     start = timer()
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     ):
         # construct scene object
         scene = FFTFileVisualizer(
-            path=path, max_height=2.5, frames_per_second=30, downsampling=4
+            path=path, max_height=3.5, frames_per_second=30, downsampling=4
         )
         scene.register("logger", logger)
 
