@@ -38,7 +38,7 @@ if __name__ == "__main__":
     ):
         # construct scene object
         scene = FFTFileVisualizer(
-            path=path, max_height=2.5, frames_per_second=30, downsampling=2
+            path=path, max_height=6, frames_per_second=20, downsampling=2
         )
         scene.add_sound(path)
         scene.register("logger", logger)
