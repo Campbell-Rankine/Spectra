@@ -9,6 +9,7 @@ from matplotlib import cm
 from manim import color
 
 from spectra.io.audio import AudioIO
+from spectra.cmaps import spectra, spectra_warm
 
 
 def compute_fft_frames(samples, rate, frame_size=1024, hop_size=512):
@@ -33,10 +34,11 @@ class FFTFileVisualizer(Scene):
         max_height: Optional[int] = 6,
         frames_per_second: Optional[int] = 20,
         smoothing: Optional[float] = 0.2,
-        opacity: Optional[float] = 0.85,
+        opacity: Optional[float] = 0.8,
         spacing: Optional[float] = 0.05,
         downsampling: Optional[int] = 2,
         height_clipping: Optional[int] = 3.0,
+        min_height: Optional[float] = 0.01,
         **kw,
     ):
         super().__init__(**kw)
@@ -46,10 +48,11 @@ class FFTFileVisualizer(Scene):
         self.smoothing = smoothing
         self.opacity = opacity
         self.spacing = spacing
-        self.colormap = cm.get_cmap("plasma")
+        self.colormap = spectra_warm.cmap
         self.downsample = downsampling
         self.height_clipping = height_clipping
         self.animate_counter: int = 0
+        self.min_height = min_height
 
     def log(self, msg: str, level: str):
         if self.logger is None:
@@ -89,13 +92,20 @@ class FFTFileVisualizer(Scene):
         )
 
         # Convert linear frequency bins to log bins
-        min_freq = 100  # Minimum frequency of interest (Hz)
-        max_freq = 18000  # Nyquist frequency
-        num_log_bins = 256  # Set number of perceptual bins
+        min_freq = 10  # Minimum frequency of interest (Hz)
+        max_freq = 21050  # Nyquist frequency
+        num_log_bins = 512  # Set number of perceptual bins
 
-        log_bin_edges = np.logspace(
-            np.log10(min_freq), np.log10(max_freq), num=num_log_bins + 1
+        log_bin_edges = (
+            np.logspace(
+                np.log(min_freq),
+                np.log(max_freq),
+                num=num_log_bins + 1,
+                base=np.e,
+            )
+            * 21
         )
+
         log_bin_indices = np.digitize(freqs, log_bin_edges) - 1  # Map freqs to bins
 
         # For each frame, we will average magnitudes in each log bin
@@ -126,28 +136,30 @@ class FFTFileVisualizer(Scene):
                 )
                 .set_stroke(width=0)
                 .align_to(ORIGIN, DOWN)
+                .stretch_to_fit_height(t.get_value())
             )
             bars.add(bar)
-
+        self.add(bars)
         bars.arrange(RIGHT, buff=1e-7)
 
         bars.move_to((ORIGIN))
-        bars.move_to((0.05 * LEFT))
-        self.add(bars)
+        bars.move_to((5.5 * RIGHT))
 
         # Animate Frames
         for fft in fft_frames[:: self.downsample]:  # downsample for speed
             # Normalize heights
-            frame_mean = np.mean(fft)
             log_fft = aggregate_log_bins(fft)
-            norm = np.clip(log_fft, 0, 1)
-            for bar, h in zip(bars, norm):
-                if h < frame_mean:
-                    h = 5 * h
-
-                bar.stretch_to_fit_height(np.clip(h, 0, self.height_clipping))
+            norm = np.clip(log_fft, 0, self.height_clipping)
+            for idx, (bar, h) in enumerate(zip(bars, norm)):
+                if (
+                    idx > num_log_bins - (num_log_bins / 2)
+                    and h * 3.775 < self.height_clipping
+                ):
+                    h = h * 3.5
+                if idx < num_log_bins / 3 or h > self.height_clipping - 1:
+                    h = h / 1.5
+                bar.stretch_to_fit_height(max(h, self.min_height))
                 bar.move_to([bar.get_x(), bar.get_y(), 0])
-                bar.stretch_to_fit_width(0.05)
                 bar.set_fill(self.color_for_amplitude(h))
 
             self.wait(1 / self.frames_per_second)
@@ -176,7 +188,7 @@ class FFTFilePlaneVisualizer(Scene):
         self.smoothing = smoothing
         self.opacity = opacity
         self.spacing = spacing
-        self.colormap = cm.get_cmap("managua")
+        self.colormap = cm.get_cmap("nipy_spectral")
         self.downsample = downsampling
         self.animate_counter: int = 0
 

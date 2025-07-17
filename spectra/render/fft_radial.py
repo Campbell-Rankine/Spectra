@@ -6,7 +6,7 @@ import logging
 from typing import Any, Optional
 from scipy.interpolate import interp1d
 from matplotlib import cm
-from manim import Color
+from manim import color
 
 from spectra.io.audio import AudioIO
 
@@ -33,8 +33,11 @@ class FFTFileRadialVisualizer(Scene):
         max_height: Optional[int] = 6,
         frames_per_second: Optional[int] = 20,
         smoothing: Optional[float] = 0.2,
-        opacity: Optional[float] = 0.85,
-        spacing: Optional[float] = 0.025,
+        opacity: Optional[float] = 0.8,
+        spacing: Optional[float] = 0.05,
+        downsampling: Optional[int] = 2,
+        height_clipping: Optional[int] = 3.0,
+        min_height: Optional[float] = 0.01,
         **kw,
     ):
         super().__init__(**kw)
@@ -45,7 +48,10 @@ class FFTFileRadialVisualizer(Scene):
         self.opacity = opacity
         self.spacing = spacing
         self.colormap = cm.get_cmap("plasma")
+        self.downsample = downsampling
+        self.height_clipping = height_clipping
         self.animate_counter: int = 0
+        self.min_height = min_height
 
     def log(self, msg: str, level: str):
         if self.logger is None:
@@ -58,8 +64,15 @@ class FFTFileRadialVisualizer(Scene):
         self.__setattr__(name, object)
 
     def color_for_amplitude(self, val):
-        rgba = self.colormap(np.clip(val / self.max_amp, 0, 1))  # Returns (r, g, b, a)
-        return Color(rgb=rgba[:3])  # Drop alpha
+        rgba = list(self.colormap(np.clip(val, 0, 1)))  # Returns (r, g, b, a)
+        rgba[-1] = 1.0
+        return color.rgb_to_color(rgb=tuple(rgba))  # Drop alpha
+
+    def inverted_color_for_amplitude(self, val):
+        inverse = self.colormap.reversed()
+        rgba = list(inverse(np.clip(val, 0, 1)))  # Returns (r, g, b, a)
+        rgba[-1] = 1.0
+        return color.rgb_to_color(rgb=tuple(rgba))  # Drop alpha
 
     def construct(self):
         samples, rate = self.io.read()
@@ -69,41 +82,73 @@ class FFTFileRadialVisualizer(Scene):
         fft_frames, freqs = compute_fft_frames(samples, rate)
         num_bins = len(freqs)
 
+        min_freq = 10  # Minimum frequency of interest (Hz)
+        max_freq = 21000  # Nyquist frequency
+        num_log_bins = 512  # Set number of perceptual bins
+
+        log_bin_edges = (
+            np.logspace(
+                np.log2(min_freq),
+                np.log2(max_freq),
+                num=num_log_bins + 1,
+                base=2,
+            )
+            * 30
+        )
+        log_bin_indices = np.digitize(freqs, log_bin_edges) - 1  # Map freqs to bins
+
+        # For each frame, we will average magnitudes in each log bin
+        def aggregate_log_bins(fft_frame):
+            log_magnitudes = np.zeros(num_log_bins)
+            for i in range(num_log_bins):
+                bin_mask = log_bin_indices == i
+                if np.any(bin_mask):
+                    log_magnitudes[i] = np.mean(fft_frame[bin_mask])
+            log_magnitudes /= np.max(log_magnitudes)
+            return log_magnitudes
+
         center = ORIGIN
         radius = self.max_h
         trackers = [ValueTracker(0.1) for _ in range(num_bins)]
         bars = VGroup()
 
-        angle_step = TAU / num_bins
+        angle_step = 360 / (num_log_bins)
 
         for i, tracker in enumerate(trackers):
             angle = i * angle_step
 
-            def make_bar(i=i, t=tracker):
-                def create_bar():
-                    h = t.get_value()
-                    bar = Rectangle(width=0.05, height=h)
-                    bar.set_fill(self.color_for_amplitude(h / self.max_h), self.opacity)
-                    bar.set_stroke(width=0)
-                    bar.move_to(
-                        center + radius * np.array([np.cos(angle), np.sin(angle), 0])
-                    )
-                    bar.rotate(angle, about_point=center)
-                    bar.shift(
-                        bar.get_height()
-                        / 2
-                        * np.array([np.cos(angle), np.sin(angle), 0])
-                    )
-                    return bar
+            bar = always_redraw(
+                lambda t=tracker, i=i: Rectangle(width=0.05, height=t.get_value())
+                .set_fill(
+                    self.color_for_amplitude(t.get_value() / self.max_h),
+                    self.opacity,
+                )
+                .set_stroke(width=0)
+            )
 
-                return always_redraw(create_bar)
-
-            bars.add(make_bar())
-
+            bars.add(bar)
+        bars.arrange(RIGHT, buff=1e-7)
+        bars.move_to((ORIGIN))
         self.add(bars)
 
-        for fft in fft_frames[::2]:
-            norm = np.clip(fft / np.max(fft), 0, 1)
-            for tracker, val in zip(trackers, norm):
-                tracker.set_value(val * self.max_h)
+        for fft in fft_frames[:: self.downsample]:  # downsample for speed
+            # Normalize heights
+            log_fft = aggregate_log_bins(fft)
+            norm = np.clip(log_fft, 0, self.height_clipping)
+            for idx, (bar, h) in enumerate(zip(bars, norm)):
+                angle = (idx + 1) * angle_step
+                angle = angle + 90
+                x = radius * np.cos(angle)
+                y = radius * np.sin(angle)
+
+                bar.stretch_to_fit_height(max(h, self.min_height))
+                bar.align_to([x, y, 0])
+                # bar.stretch_to_fit_width(0.05)
+                bar.rotate(angle, about_point=bar.get_center())
+                bar.move_to(
+                    center + radius * np.array([np.cos(angle), np.sin(angle), 0])
+                )
+
+                bar.set_fill(self.color_for_amplitude(h))
+
             self.wait(1 / self.frames_per_second)

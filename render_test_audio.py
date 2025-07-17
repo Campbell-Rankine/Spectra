@@ -10,8 +10,9 @@ from spectra.utils import AudioAttachment
 from spectra.render.fft import FFTFileVisualizer
 
 # only to be used on docker
-path_ = "/root/spectra/test_data/jigsaw-3-parts-full.wav"
-path2 = "./test_data/jigsaw-3-parts-full.wav"
+song_name = "jigsaw-3-parts-bal-3.wav"
+path_ = f"/root/spectra/test_data/{song_name}"
+path2 = f"./test_data/{song_name}"
 
 if __name__ == "__main__":
     start = timer()

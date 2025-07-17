@@ -1,9 +1,9 @@
-numpy
+manim
+pyaudio
+numpy==2.2.0
 pandas
 configparser
-pyaudio
 scipy
 scikit-learn
-manim
-scipy
 moviepy
+cffi
