@@ -7,10 +7,10 @@ from manim import config, tempconfig
 from client import init_logger
 from spectra.io.audio import AudioIO
 from spectra.utils import AudioAttachment
-from spectra.render.fft import FFTFileVisualizer
+from spectra.render.manim.fft_hist import FFTFileVisualizer
 
 # only to be used on docker
-song_name = "jigsaw-3-parts-bal-3.wav"
+song_name = "karma police.wav"
 path_ = f"/root/spectra/test_data/{song_name}"
 path2 = f"./test_data/{song_name}"
 

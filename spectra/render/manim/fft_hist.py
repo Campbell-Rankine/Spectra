@@ -10,7 +10,7 @@ from manim import color
 
 from spectra.io.audio import AudioIO
 from spectra.cmaps import spectra, spectra_warm
-from spectra.fft import compute_fft_frames
+from spectra.fft import compute_fft_frames, Real1DLogFFT
 
 
 class FFTFileVisualizer(Scene):
@@ -23,12 +23,15 @@ class FFTFileVisualizer(Scene):
         path: str,
         max_height: Optional[int] = 6,
         frames_per_second: Optional[int] = 20,
+        chunk_size: Optional[int] = 1024,
+        hop_size: Optional[int] = 512,
         smoothing: Optional[float] = 0.2,
         opacity: Optional[float] = 0.8,
         spacing: Optional[float] = 0.05,
         downsampling: Optional[int] = 2,
         height_clipping: Optional[int] = 3.0,
         min_height: Optional[float] = 0.01,
+        zoom_out: Optional[int] = 21,
         **kw,
     ):
         super().__init__(**kw)
@@ -43,6 +46,29 @@ class FFTFileVisualizer(Scene):
         self.height_clipping = height_clipping
         self.animate_counter: int = 0
         self.min_height = min_height
+        self.chunk_size = chunk_size
+        self.hop_size = hop_size
+        self.zoom_out = zoom_out
+        self.fft = self._create_fft_(**kw)
+
+    def _create_fft_(self, **kw):
+        shift_frames = kw.get("shift_frames", False)
+        log_base = kw.get("log_base", np.e)
+        min_freq = kw.get("min_frequency", 10)
+        max_freq = kw.get("max_frequency", "nyquist")
+        num_log_bins = kw.get("num_log_bins", 512)
+        transformer = Real1DLogFFT(
+            44100,
+            self.chunk_size,
+            self.hop_size,
+            shift_frames,
+            self.zoom_out,
+            log_base,
+            min_freq,
+            max_freq,
+            num_log_bins,
+        )
+        return transformer
 
     def log(self, msg: str, level: str):
         if self.logger is None:
@@ -70,10 +96,6 @@ class FFTFileVisualizer(Scene):
         self.animate_counter += 1
         samples, rate = self.io.read()
 
-        # convert to mono
-        if samples.ndim > 1:
-            samples = samples.mean(axis=1)
-
         # calculate fft
         fft_frames, freqs = compute_fft_frames(samples, rate)
         self.log(
@@ -83,19 +105,12 @@ class FFTFileVisualizer(Scene):
 
         # Convert linear frequency bins to log bins
         min_freq = 10  # Minimum frequency of interest (Hz)
-        max_freq = 21050  # Nyquist frequency
-        num_log_bins = 512  # Set number of perceptual bins
+        max_freq = 22050  # Nyquist frequency
+        num_log_bins = 1024  # Set number of perceptual bins
 
-        log_bin_edges = (
-            np.logspace(
-                np.log(min_freq),
-                np.log(max_freq),
-                num=num_log_bins + 1,
-                base=np.e,
-            )
-            * 21
+        log_bin_edges = np.logspace(
+            np.log(min_freq), np.log(max_freq), num=num_log_bins + 1
         )
-
         log_bin_indices = np.digitize(freqs, log_bin_edges) - 1  # Map freqs to bins
 
         # For each frame, we will average magnitudes in each log bin
@@ -108,12 +123,8 @@ class FFTFileVisualizer(Scene):
             log_magnitudes /= np.max(log_magnitudes)
             return log_magnitudes
 
-        # convert audio samples to log space for better alignment with human hearing
-        num_bins = len(freqs)
-
         # --- Frequency Bins ---
-        trackers = [ValueTracker(0.1) for _ in range(num_log_bins)]
-        self.max_amp = np.max(fft_frames)
+        trackers = [ValueTracker(0.1) for _ in range(self.fft.num_log_bins)]
 
         # Create bars for initial frame
         bars = VGroup()
@@ -133,21 +144,22 @@ class FFTFileVisualizer(Scene):
         bars.arrange(RIGHT, buff=1e-7)
 
         bars.move_to((ORIGIN))
-        bars.move_to((5.5 * RIGHT))
+        bars.move_to((6 * RIGHT))
 
         # Animate Frames
-        for fft in fft_frames[:: self.downsample]:  # downsample for speed
-            # Normalize heights
+        for fft in fft_frames:  # downsample for speed
             log_fft = aggregate_log_bins(fft)
             norm = np.clip(log_fft, 0, self.height_clipping)
             for idx, (bar, h) in enumerate(zip(bars, norm)):
+                # TODO: convert this if else statement to be an envelope
                 if (
                     idx > num_log_bins - (num_log_bins / 2)
+                    or idx < num_log_bins + (num_log_bins / 2)
                     and h * 3.775 < self.height_clipping
                 ):
-                    h = h * 3.5
-                if idx < num_log_bins / 3 or h > self.height_clipping - 1:
-                    h = h / 1.5
+                    h = h * 2
+                if idx < num_log_bins / 4 or h > self.height_clipping - 1:
+                    h = h / 2
                 bar.stretch_to_fit_height(max(h, self.min_height))
                 bar.move_to([bar.get_x(), bar.get_y(), 0])
                 bar.set_fill(self.color_for_amplitude(h))
