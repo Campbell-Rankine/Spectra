@@ -161,3 +161,9 @@ class StemSplitter(_BaseStemSplitter):
         if no_grad:
             return self._no_grad_forward(waveform, mix)
         return self._grad_forward(waveform, mix)
+
+    def __call__(self, path_to_audio: str):
+        assert os.path.exists(path_to_audio)
+        _, waveform, mix = self.build(path_to_audio)
+        audios, _, _ = self.forward(waveform, mix, no_grad=True)
+        return audios
