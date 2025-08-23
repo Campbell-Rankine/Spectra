@@ -18,7 +18,7 @@ class _BaseStemSplitter(ABC):
         self.device = T.device(
             kw.get("device", "cuda:0" if T.cuda.is_available() else "cpu")
         )
-        self.dtype = kw.get("dtype", T.float64)
+        self.dtype = kw.get("dtype", T.double)
         self.logger = logger
         self.needs_scaling = False
 
@@ -49,9 +49,9 @@ class _BaseStemSplitter(ABC):
         # iterate over class objects, if they have device set device
         for name, attr in self.__dict__.items():
             if hasattr(attr, "device") or hasattr(attr, "to"):
-                self.__getattr__(name).to(device)
+                self.__getattribute__(name).to(device)
                 if not dtype is None:
-                    self.__getattr__(name).to(dtype=dtype)
+                    self.__getattribute__(name).to(dtype=dtype)
 
     def load(self, force=False):
         if force or not self.model is None:
@@ -80,11 +80,12 @@ class _BaseStemSplitter(ABC):
             )
 
         mix = deepcopy(waveform)
+        if normalize:
+            waveform = self.normalize_waveform(waveform)
+
         waveform.to(self.device, dtype=self.dtype)
         mix.to(self.device, dtype=self.dtype)
 
-        if normalize:
-            waveform = self.normalize_waveform(waveform)
         return (audio_sr, waveform, mix)
 
     @abstractmethod
@@ -135,10 +136,12 @@ class StemSplitter(_BaseStemSplitter):
 
     def _grad_forward(self, waveform, mix):
         assert not self.model is None and hasattr(self, "sample_rate")
+        self.to(self.device, self.dtype)
         # split audio into iterable chunks with overlap / fade in / fade out
         sources = self.audio_chunking(
             self.model,
             waveform[None],
+            self.sample_rate,
             device=self.device,
             segment=self.segment,
             overlap=self.overlap,

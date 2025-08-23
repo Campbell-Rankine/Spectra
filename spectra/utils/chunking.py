@@ -10,6 +10,7 @@ def separate_sources(
     segment=10.0,
     overlap=0.1,
     device=None,
+    dtype=torch.double,
 ):
     """
     Apply model to a given mixture. Use fade, and add segments together in order to add model segment by segment.
@@ -38,8 +39,8 @@ def separate_sources(
 
     while start < length - overlap_frames:
         chunk = mix[:, :, start:end]
-        with torch.no_grad():
-            out = model.forward(chunk)
+        chunk = chunk.to(device, dtype=dtype)
+        out = model.forward(chunk)
         out = fade(out)
         final[:, :, :, start:end] += out
         if start == 0:
