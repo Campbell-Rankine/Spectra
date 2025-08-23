@@ -105,7 +105,7 @@ class FFTFileVisualizer(Scene):
 
         # Convert linear frequency bins to log bins
         min_freq = 10  # Minimum frequency of interest (Hz)
-        max_freq = 22050  # Nyquist frequency
+        max_freq = 21500  # Nyquist frequency
         num_log_bins = 1024  # Set number of perceptual bins
 
         log_bin_edges = np.logspace(
@@ -144,24 +144,32 @@ class FFTFileVisualizer(Scene):
         bars.arrange(RIGHT, buff=1e-7)
 
         bars.move_to((ORIGIN))
-        bars.move_to((6 * RIGHT))
+        bars.move_to((6.0 * RIGHT))
 
         # Animate Frames
+
+        rendered_frame_counter = 0
         for fft in fft_frames:  # downsample for speed
             log_fft = aggregate_log_bins(fft)
             norm = np.clip(log_fft, 0, self.height_clipping)
+            if rendered_frame_counter > 8000:  # duration * sample_rate
+                break
+            rendered_frame_counter += 1
+            if rendered_frame_counter % 20 == 0:
+                self.log(
+                    f"Rendered - {rendered_frame_counter}/{8000}={100*round(rendered_frame_counter/(8000), 3)}%",
+                    "info",
+                )
+            mean_height = np.mean(log_fft)
             for idx, (bar, h) in enumerate(zip(bars, norm)):
                 # TODO: convert this if else statement to be an envelope
-                if (
-                    idx > num_log_bins - (num_log_bins / 2)
-                    or idx < num_log_bins + (num_log_bins / 2)
-                    and h * 3.775 < self.height_clipping
-                ):
-                    h = h * 2
-                if idx < num_log_bins / 4 or h > self.height_clipping - 1:
-                    h = h / 2
-                bar.stretch_to_fit_height(max(h, self.min_height))
-                bar.move_to([bar.get_x(), bar.get_y(), 0])
+
+                if h < 0.5 * mean_height:
+                    h = 2.85 * h
+                elif h > 1.5 * mean_height:
+                    h = h / 1.4
+                bar.stretch_to_fit_height(1.1 * max((h / (h + 1)), self.min_height))
+                bar.move_to([bar.get_x(), 0, bar.get_y()])
                 bar.set_fill(self.color_for_amplitude(h))
 
             self.wait(1 / self.frames_per_second)
