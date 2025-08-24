@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 import logging
 
+from spectra.utils.io import get_song_name, mkdir_if_not_exist
 from spectra.utils.chunking import separate_sources
 from spectra.utils.data import plot_spectrogram
 
@@ -62,12 +63,16 @@ class _BaseStemSplitter(ABC):
     def normalize_waveform(self, waveform: T.Tensor) -> T.Tensor:
         self.needs_scaling = True
         mu = waveform.mean(0)
-        return (waveform - mu) / mu.std()
+        normalized = (waveform - mu.mean()) / mu.std()
+        self.log(f"Before Normalization - max: {waveform.max()}, min: {waveform.min()}")
+        return normalized
 
     def unnormalize_waveform(self, waveform: T.Tensor) -> T.Tensor:
         self.needs_scaling = False
         mu = waveform.mean(0)
-        return (waveform * mu.std()) + mu.mean()
+        unnormalized = (waveform * mu.std()) + mu.mean()
+        self.log(f"Unnormalized - max: {unnormalized.max()}, min: {unnormalized.min()}")
+        return unnormalized
 
     def load_audio(self, path: str, normalize: Optional[bool] = True) -> tuple:
         # kw = tensor kwargs
@@ -162,8 +167,28 @@ class StemSplitter(_BaseStemSplitter):
             return self._no_grad_forward(waveform, mix)
         return self._grad_forward(waveform, mix)
 
-    def __call__(self, path_to_audio: str):
+    def __call__(
+        self,
+        path_to_audio: str,
+        output_path: Optional[str] = None,
+        return_original: Optional[bool] = False,
+    ):
         assert os.path.exists(path_to_audio)
         _, waveform, mix = self.build(path_to_audio)
         audios, _, _ = self.forward(waveform, mix, no_grad=True)
-        return audios
+
+        file_paths = []
+        if not output_path is None:
+            song_name = get_song_name(path_to_audio)
+            for k, v in audios.items():
+                ext = "mono" if v.shape[0] == 1 else "stereo"
+                mkdir_if_not_exist(output_path, subdirs=[song_name])
+                file_paths.append(f"{output_path}/{song_name}/{k}-{ext}.wav")
+                torchaudio.save(
+                    f"{output_path}/{song_name}/{k}-{ext}.wav",
+                    v.cpu(),
+                    self.sample_rate,
+                )
+        if return_original:
+            audios["mix"] = mix
+        return list(audios.keys()), audios, file_paths
