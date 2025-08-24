@@ -31,8 +31,6 @@ class AudioIO:
             samples = np.asarray(samples, self.dtype)
         samples /= np.max(np.abs(samples))
         return samples
-    
-    def read
 
     def read(self, verbose=False, truncate: Optional[int] = None):
         audio: AudioSegment = AudioSegment.from_file(self.path, format="wav")
