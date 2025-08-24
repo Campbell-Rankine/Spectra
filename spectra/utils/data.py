@@ -2,12 +2,8 @@ import os
 import multiprocessing
 import numpy
 from moviepy import AudioFileClip, VideoFileClip
-
-
-class ArrayCoreMap:
-    def __init__(self, num_cpus: int):
-        self.num_cpus = num_cpus
-        # TODO: Write a function to map subsets of the frames to each cpu core
+import torch
+import matplotlib.pyplot as plt
 
 
 class AudioAttachment:
@@ -22,3 +18,14 @@ class AudioAttachment:
 
         # Export the final video with the new audio
         final_clip.write_videofile(self.output_path)
+
+
+def plot_spectrogram(stft, title="Spectrogram"):
+    magnitude = stft.abs()
+    spectrogram = 20 * torch.log10(magnitude + 1e-8).cpu().numpy()
+    _, axis = plt.subplots(1, 1)
+    axis.imshow(
+        spectrogram, cmap="viridis", vmin=-60, vmax=0, origin="lower", aspect="auto"
+    )
+    axis.set_title(title)
+    plt.tight_layout()

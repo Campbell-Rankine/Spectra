@@ -2,6 +2,7 @@ from click import Option
 import numpy as np
 from typing import Optional, Any, Iterable
 from scipy.fft import rfft, rfftfreq, irfft, fftshift
+from zmq import has
 
 
 def compute_fft_frames(samples, rate, frame_size=1024, hop_size=512):
@@ -46,15 +47,12 @@ class _BaseFFT:
     def nyquist_frequency(self):
         return 22050  # hertz
 
-    def smooth(self, value_index, value):
-        new_frame_weight = 1 - self.smoothing
-        prev_frame_weight = self.smoothing
-
-        # calculate the harmonic mean between the two frames
-        smoothed_value = (
-            prev_frame_weight * self.prev[value_index] + new_frame_weight * value
-        )
-        self.prev[value_index] = value  # update the index for the previous value
+    def smooth(self, value1, value2):
+        if np.sum(value1) == 0:
+            return value2
+        elif np.sum(value2) == 0:
+            return value1
+        smoothed_value = (self.smoothing * value1) + ((1 - self.smoothing) * value2)
         return smoothed_value
 
     def register_transform(
@@ -162,6 +160,8 @@ class Real1DLogFFT(_BaseFFT):
             raise ValueError(
                 f"Invalid frequency type for max frequency={type(max_frequency)}, {max_frequency}"
             )
+        self.curr_frame = -1
+        self.previous_value = -1
 
     def _get_logspace_freqs(self, freqs):
 
@@ -188,22 +188,15 @@ class Real1DLogFFT(_BaseFFT):
             log_magnitudes /= np.max(log_magnitudes)
         return log_magnitudes
 
-    def __call__(
+    def load(
         self,
-        x: Iterable,
-        apply_transforms: Optional[bool] = True,
-        transform_step: Optional[str] = "after",
-        dim_reduction: Optional[bool] = False,
-        return_freq_edges: Optional[bool] = False,
-        **kw,
+        x,
+        convert_to_mono: Optional[bool] = False,
     ):
-        if transform_step == "before" and apply_transforms:
-            x = self.apply(x, dim_reduction=dim_reduction)
-
         if not isinstance(x, np.ndarray):
             x = np.asarray(x)
 
-        if len(x.shape) > 1:
+        if len(x.shape) > 1 and convert_to_mono:
             x = np.mean(x, axis=1)  # convert to mono
 
         num_frames = (len(x) - self.frame_size) // self.hop_size
@@ -212,20 +205,29 @@ class Real1DLogFFT(_BaseFFT):
             * np.hanning(self.frame_size)
             for i in range(num_frames)
         ]
-        fft_frames = [np.abs(rfft(frame)) for frame in frames]
-        freqs = rfftfreq(self.frame_size, d=1 / self.sample_rate)
+        self.fft_frames = [np.abs(rfft(frame)) for frame in frames]
+        self.freqs = rfftfreq(self.frame_size, d=1 / self.sample_rate)
+        self.log_edges, self.log_bins = self._get_logspace_freqs(self.freqs)
 
-        for frame in fft_frames:
-            log_fft = self.aggregate_log_bins(frame, freqs, **kw)
+    def __iter__(self):
+        return next(iter(self))
 
-        # get log transformed frames
-        log_edges, freqs = self._get_logspace_freqs(freqs)
-        fft_frames = self.aggregate_log_bins(x, log_edges, **kw)
-
-        if transform_step == "after" and apply_transforms:
-            fft_frames = self.apply(x, dim_reduction)
-
-        if return_freq_edges:
-            return fft_frames, freqs, log_edges
+    def __next__(self):
+        self.curr_frame = self.curr_frame + 1
+        assert (
+            hasattr(self, "fft_frames")
+            and hasattr(self, "freqs")
+            and hasattr(self, "log_edges")
+            and hasattr(self, "log_bins")
+        )
+        if self.curr_frame >= len(self.fft_frames):
+            print("Stopping on %i" % self.curr_frame)
+            raise StopIteration()
         else:
-            return fft_frames, freqs
+            frame = self.fft_frames[self.curr_frame]
+            log_fft = self.aggregate_log_bins(frame, self.log_bins)
+            if self.previous_value == -1:
+                self.previous_value = np.zeros_like(log_fft)
+            smoothed_log_fft = self.smooth(self.previous_value, log_fft)
+            self.previous_value = log_fft
+            yield smoothed_log_fft

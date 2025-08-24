@@ -4,13 +4,13 @@ import numpy
 from timeit import default_timer as timer
 
 from manim import config, tempconfig
-from client import init_logger
+from server.client import init_logger
 from spectra.io.audio import AudioIO
 from spectra.utils import AudioAttachment
 from spectra.render.manim.fft_hist import FFTFileVisualizer
 
 # only to be used on docker
-song_name = "karma police.wav"
+song_name = "jigsaw-bass cover.wav"
 path_ = f"/root/spectra/test_data/{song_name}"
 path2 = f"./test_data/{song_name}"
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     ):
         # construct scene object
         scene = FFTFileVisualizer(
-            path=path, max_height=6, frames_per_second=20, downsampling=2
+            path=path, max_height=5, frames_per_second=20, downsampling=2
         )
         scene.add_sound(path)
         scene.register("logger", logger)
