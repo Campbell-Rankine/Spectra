@@ -12,3 +12,4 @@ torchaudio
 torchvision
 plotly
 mir_eval
+pyflac
