@@ -12,19 +12,15 @@ def ui():
         # Fixed slots for 4 stems
         with gr.Row():
             vocals_audio = gr.Audio(label="Vocals", type="filepath")
-            vocals_file = gr.File(label="Download Vocals")
 
         with gr.Row():
             drums_audio = gr.Audio(label="Drums", type="filepath")
-            drums_file = gr.File(label="Download Drums")
 
         with gr.Row():
             bass_audio = gr.Audio(label="Bass", type="filepath")
-            bass_file = gr.File(label="Download Bass")
 
         with gr.Row():
             other_audio = gr.Audio(label="Other", type="filepath")
-            other_file = gr.File(label="Download Other")
 
         stem_selector = gr.CheckboxGroup(
             ["vocals", "drums", "bass", "other"], label="Select stems to combine"
@@ -44,22 +40,20 @@ def ui():
 
             # Map results back into fixed slots
             mapping = {
-                "vocals": (vocals_audio, vocals_file),
-                "drums": (drums_audio, drums_file),
-                "bass": (bass_audio, bass_file),
-                "other": (other_audio, other_file),
+                "vocals": vocals_audio,
+                "drums": drums_audio,
+                "bass": bass_audio,
+                "other": other_audio,
             }
 
             audio_vals = [None, None, None, None]
-            file_vals = [None, None, None, None]
 
-            for lbl, audio, f in zip(labels, audios, files):
+            for lbl, audio, _ in zip(labels, audios, files):
                 if lbl in mapping:
                     idx = ["vocals", "drums", "bass", "other"].index(lbl)
                     audio_vals[idx] = audio
-                    file_vals[idx] = f
 
-            return audio_vals + file_vals
+            return audio_vals
 
         audio_input.change(
             fn=on_submit,
@@ -69,10 +63,6 @@ def ui():
                 drums_audio,
                 bass_audio,
                 other_audio,
-                vocals_file,
-                drums_file,
-                bass_file,
-                other_file,
             ],
         )
 

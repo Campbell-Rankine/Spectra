@@ -12,7 +12,6 @@ def cache_stem_request(path_to_audio: str, output_path: str) -> tuple[int, np.nd
     files = []
     if os.path.exists(f"{output_path}/{song_name}"):
         for file in os.listdir(f"{output_path}/{song_name}"):
-            print(file)
             wav = gr.Audio(f"{output_path}/{song_name}/{file}")
             audios.append(wav)
             files.append(f"{output_path}/{song_name}/{file}")
