@@ -39,6 +39,7 @@ def ui():
             splitter = StemSplitter(load_on_init=True)
 
             labels, audios, files = splitter(file, output_path="./output")
+            print(files, audios)
             del splitter
 
             # Map results back into fixed slots
