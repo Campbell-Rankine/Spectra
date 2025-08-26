@@ -6,10 +6,13 @@ from typing import Optional, Iterable, Callable
 from abc import ABC, abstractmethod
 from copy import deepcopy
 import logging
+import gradio as gr
 
+from spectra.io.audio import AudioIO
 from spectra.utils.io import get_song_name, mkdir_if_not_exist
 from spectra.utils.chunking import separate_sources
 from spectra.utils.data import plot_spectrogram
+from spectra.utils.caching import cache_stem_request
 
 
 class _BaseStemSplitter(ABC):
@@ -113,6 +116,7 @@ class StemSplitter(_BaseStemSplitter):
         n_hop: Optional[int] = 4,
         audio_chunking: Optional[Callable] = separate_sources,
         plotting_fn: Optional[Callable] = plot_spectrogram,
+        output_reader: Optional[type] = gr.Audio,
         **kw,
     ):
         super().__init__(bundle, load_on_init, **kw)
@@ -126,6 +130,8 @@ class StemSplitter(_BaseStemSplitter):
         # cls functions
         self.audio_chunking = audio_chunking
         self._plotter = plotting_fn
+        self.__output_reader = output_reader
+
         if load_on_init:
             self.load(True)
 
@@ -171,10 +177,15 @@ class StemSplitter(_BaseStemSplitter):
         self,
         path_to_audio: str,
         output_path: Optional[str] = None,
+        no_cache: Optional[bool] = False,
         return_original: Optional[bool] = False,
     ):
         assert os.path.exists(path_to_audio)
-        _, waveform, mix = self.build(path_to_audio)
+        if not no_cache:
+            audios, files = cache_stem_request(path_to_audio, output_path)
+            if (not audios == []) and (not files == []):
+                return self.sources, audios, files
+        samplerate, waveform, mix = self.build(path_to_audio)
         audios, _, _ = self.forward(waveform, mix, no_grad=True)
 
         file_paths = []
@@ -183,12 +194,21 @@ class StemSplitter(_BaseStemSplitter):
             for k, v in audios.items():
                 ext = "mono" if v.shape[0] == 1 else "stereo"
                 mkdir_if_not_exist(output_path, subdirs=[song_name])
-                file_paths.append(f"{output_path}/{song_name}/{k}-{ext}.wav")
+                file_paths.append(f"{output_path}/{song_name}/{k}.wav")
                 torchaudio.save(
-                    f"{output_path}/{song_name}/{k}-{ext}.wav",
+                    f"{output_path}/{song_name}/{k}.wav",
                     v.cpu(),
                     self.sample_rate,
                 )
-        if return_original:
-            audios["mix"] = mix
-        return list(audios.keys()), audios, file_paths
+                self.log(
+                    f"Saved song to: {output_path}/{song_name}/{k}.wav | Audio min={v.min()}, Audio Max={v.max()}"
+                )
+        _audios = []
+        for f in file_paths:
+            _audios.append(self.__output_reader(f))
+
+        return (
+            list(audios.keys()),
+            _audios,
+            file_paths,
+        )
