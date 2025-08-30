@@ -12,3 +12,8 @@ torchaudio
 torchvision
 plotly
 mir_eval
+pyflac
+ffmpeg
+yt_dlp
+gradio
+ffprobe

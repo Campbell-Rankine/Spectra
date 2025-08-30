@@ -182,7 +182,9 @@ class StemSplitter(_BaseStemSplitter):
     ):
         assert os.path.exists(path_to_audio)
         if not no_cache:
-            audios, files = cache_stem_request(path_to_audio, output_path)
+            audios, files = cache_stem_request(
+                path_to_audio, output_path, compress=False
+            )
             if (not audios == []) and (not files == []):
                 return self.sources, audios, files
         samplerate, waveform, mix = self.build(path_to_audio)
