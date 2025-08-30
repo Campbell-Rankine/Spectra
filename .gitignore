@@ -9,6 +9,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+output/*
 /test_data
 /output
 develop-eggs/

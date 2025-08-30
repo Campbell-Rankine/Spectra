@@ -13,3 +13,5 @@ torchvision
 plotly
 mir_eval
 pyflac
+ffmpeg
+pytubefix

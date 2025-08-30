@@ -9,7 +9,8 @@ WORKDIR $WD
 FROM base AS install_dependencies
 # install dependencies
 RUN apt-get update -y && apt install -y cmake git pkg-config libsdl-pango-dev libglew-dev libpango1.0-dev \
-                    pkg-config nasm texlive-latex-base portaudio19-dev python3-pyaudio libasound2-plugins 
+                    pkg-config nasm texlive-latex-base portaudio19-dev python3-pyaudio libasound2-plugins \
+                    libjpeg8-dev libgif-dev libcairo2-dev libpango1.0-dev
 # install ffmpeg
 WORKDIR $WD/bin
 RUN git clone https://github.com/FFmpeg/FFmpeg.git
