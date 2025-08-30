@@ -14,4 +14,6 @@ plotly
 mir_eval
 pyflac
 ffmpeg
-pytubefix
+yt_dlp
+gradio
+ffprobe
