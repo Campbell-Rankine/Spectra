@@ -32,8 +32,8 @@ def ui():
 
         # ---- Audio URL input ----
         def process_url(url: str):
-            from spectra.interfaces.youtube import SpectraYTInterface
-            yt_interface = SpectraYTInterface(output_dir="./output") # TODO: Cache these downloads
+            from spectra.interfaces.youtube import SpectraYTDLPInterface, SpectraYTubeInterface
+            yt_interface = SpectraYTubeInterface(output_dir="./output") # TODO: Cache these downloads
             audio_file, waveform, sample_rate = yt_interface.download_audio(url)
             splitter = StemSplitter(load_on_init=True)
 

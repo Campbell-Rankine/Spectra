@@ -4,15 +4,33 @@ import os
 from uuid import uuid4
 import torchaudio
 import yt_dlp
+from pytube import YouTube
+import torch
 
-class SpectraYTInterface:
-    def __init__(self, output_dir: str, file_name: str = None):
-        self.output_dir = output_dir
-        os.makedirs(self.output_dir, exist_ok=True)
-        self.file_name = file_name if file_name else f"audio_{str(uuid4())}"
-        self.output_file = os.path.join(self.output_dir, self.file_name)
+from spectra.interfaces.base import _BaseInterface
 
-    def cache_audio(self, youtube_url: str) -> str:
+class SpectraYTubeInterface(_BaseInterface):
+    @property
+    def backend(self) -> str:
+        return "pytube"
+    
+    def cache_audio(self, youtube_url: str) -> tuple[str, torch.Tensor, int] :
+        raise NotImplementedError()
+    
+    def download_audio(self, youtube_url: str) -> str:
+        _audio = YouTube(youtube_url).streams.filter(only_audio=True, file_extension="wav").first()
+        # Convert to wav
+
+        # Load with torchaudio
+        waveform, sample_rate = torchaudio.load(_audio)
+        return self.output_file, waveform, sample_rate
+
+class SpectraYTDLPInterface:
+    @property
+    def backend(self) -> str:
+        return "yt-dlp"
+
+    def cache_audio(self, youtube_url: str) -> tuple[str, torch.Tensor, int] :
         raise NotImplementedError()
     
     def download_audio(self, youtube_url: str) -> str:
@@ -21,9 +39,9 @@ class SpectraYTInterface:
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "wav",   # could use "flac" for lossless, or "mp3"
-                "preferredquality": "192", # kbps for lossy formats like mp3
+                "preferredquality": "96", # kbps for lossy formats like mp3
             }],
-            "concurrent_fragment_downloads": 5,
+            "concurrent_fragment_downloads": 10,
             "outtmpl": self.output_file,
         }
 
