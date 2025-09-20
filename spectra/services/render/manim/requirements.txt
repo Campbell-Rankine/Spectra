@@ -1,0 +1,9 @@
+manim
+pyaudio
+numpy==2.2.0
+pandas
+configparser
+ffmpeg
+yt_dlp
+gradio
+ffprobe
