@@ -1,9 +1,9 @@
 services:
-  spectra:
-    image: spectra_services
+  spectra_split:
+    image: spectra_split:latest
     build: 
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./spectra/services/audio/audio.Dockerfile
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     network_mode: host
