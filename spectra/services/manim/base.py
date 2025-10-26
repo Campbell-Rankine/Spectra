@@ -3,10 +3,11 @@ from manim import *
 from scipy.fft import rfft, rfftfreq
 import os
 import logging
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 from scipy.interpolate import interp1d
 from matplotlib import cm
 from manim import color
+from scipy.ndimage import gaussian_filter
 
 from spectra.io.audio import AudioIO
 from spectra.cmaps import spectra, spectra_warm
@@ -72,7 +73,7 @@ class _BaseAudioVisualizer(Scene):
         self.hop_size = hop_size
         self.opacity = opacity
         self.spacing = spacing
-        self.colormap = spectra_warm.cmap
+        self.colormap = cm.get_cmap("plasma")
         self.downsample = downsampling
         self.height_clipping = height_clipping
         self.min_height = min_height
@@ -117,7 +118,7 @@ class _BaseAudioVisualizer(Scene):
         rgba[-1] = 1.0
         return color.rgb_to_color(rgb=tuple(rgba))  # Drop alpha
     
-    def compute_fft_frames(self, samples, rate):
+    def compute_fft_frames(self, samples, rate, sigma=1):
         self.log(f"Computing fft frames", "info")
         num_frames = (len(samples) - self.chunk_size) // self.hop_size
         frames = [
@@ -125,7 +126,7 @@ class _BaseAudioVisualizer(Scene):
              * np.hanning(self.chunk_size) \
             for i in range(num_frames)
         ]
-        fft_frames = [np.abs(rfft(frame)) for frame in frames]
+        fft_frames = [gaussian_filter(np.abs(rfft(frame), sigma=sigma)) for frame in frames]
         freqs = rfftfreq(self.chunk_size, d=1 / rate)
         self.log(f"Done computing fft frames", "info")
         return fft_frames, freqs
@@ -167,6 +168,11 @@ class _BaseAudioVisualizer(Scene):
         return log_magnitudes
     
     def remove_outliers(self, _a: np.ndarray, z_min: Optional[float] = 3.0, noise: Optional[float]=0.25) -> np.ndarray:
+        if isinstance(_a, (np.floating, float, int, np.integer)):
+            if np.isnan(_a):
+                return np.random.uniforml(0, 1)
+            else:
+                return _a
         mean = np.mean(_a)
         stddev = np.std(_a)
         zscores = (_a - mean) / stddev
