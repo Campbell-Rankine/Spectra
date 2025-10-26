@@ -12,8 +12,8 @@ from tqdm import tqdm
 from spectra.io.audio import AudioIO
 from spectra.cmaps import spectra, spectra_warm
 from spectra.fft import compute_fft_frames, Real1DLogFFT
-from spectra.services.render.manim_.transforms import sqrt_transform, exp_transform
-from spectra.services.render.manim_.base import _BaseAudioVisualizer
+from spectra.services.manim.transforms import sqrt_transform, exp_transform
+from spectra.services.manim.base import _BaseAudioVisualizer
 
 class FFT_Histogram(_BaseAudioVisualizer):
     def __init__(self, *args, **kwargs):
