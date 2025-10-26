@@ -46,10 +46,17 @@ class FFT_Histogram(_BaseAudioVisualizer):
             mags = self.fft_frames[frame_idx]
             counts, bins = np.histogram(mags, bin_indices)
 
+            mags = self.remove_outliers(mags, z_min=2.5)
             bars = VGroup()
             for i, (count, bin) in enumerate(zip(mags, bins)):
                 exp_height = exp_transform(count, self.log_base)
-                sqrt_height = min(0.8*sqrt_transform(count), self.height_clipping)
+                sqrt_height = min(sqrt_transform(count), self.height_clipping)
+                if not sqrt_height == self.height_clipping:
+                    if i >= 100:
+                        sqrt_height = 0.6 * sqrt_height
+                    else:
+                        sqrt_height = sqrt_height * 0.4
+                
                 bar = Rectangle(
                     width=self.bar_width,
                     height=max(sqrt_height, self.min_height),

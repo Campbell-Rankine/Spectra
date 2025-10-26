@@ -40,6 +40,42 @@ def parse_cli():
         help="Video / render quality"
     )
 
+    parser.add_argument(
+        "-o",
+        "--opacity", 
+        type=float, 
+        default=0.7,
+        dest="opacity",
+        help="bar opacity"
+    )
+
+    parser.add_argument(
+        "-x",
+        "--translate-x", 
+        type=float, 
+        default=-7,
+        dest="translate_x",
+        help="Bar x coordinate translation. Applied to all"
+    )
+
+    parser.add_argument(
+        "-y",
+        "--translate-y", 
+        type=float, 
+        default=0,
+        dest="translate_y",
+        help="Bar y coordinate translation. Applied to all"
+    )
+
+    parser.add_argument(
+        "-z",
+        "--translate-z", 
+        type=float, 
+        default=1,
+        dest="translate_z",
+        help="Bar z coordinate translation. Applied to all"
+    )
+
     args = parser.parse_args()
     return args
     
@@ -72,12 +108,12 @@ def low_quality(path: str):
             path=path,
             num_bins=256,
             log_scale=True,
-            log_base=2,
+            log_base=np.e,
             translate_x=-7,
             translate_y=-1,
             translate_z=1,
-            bar_width=0.1,
-            height_clipping=4
+            bar_width=0.05,
+            height_clipping=2.0
         )
         scene.register("logger", logger)
 
@@ -85,11 +121,13 @@ def low_quality(path: str):
         scene.render()
 
     # attach audio to video
+    # TODO
+
     end = timer()
     logger.info(f"Rendering Scene Took {round(end-start, 2)} seconds")
     sys.exit(0)
 
-def medium_quality(path: str):
+def medium_quality(path: str, opacity: float, translate_x, translate_y, translate_z):
     start = timer()
     logger = init_logger()
 
@@ -117,12 +155,13 @@ def medium_quality(path: str):
             path=path,
             num_bins=512,
             log_scale=True,
-            log_base=2,
-            translate_x=-7,
-            translate_y=-1,
-            translate_z=1,
+            log_base=np.e,
+            translate_x=translate_x,
+            translate_y=translate_y,
+            translate_z=translate_z,
             bar_width=0.05,
-            height_clipping=4
+            height_clipping=1.0,
+            opacity=opacity,
         )
         scene.register("logger", logger)
 
@@ -157,12 +196,12 @@ def high_quality(path: str):
             path=path,
             num_bins=1024,
             log_scale=True,
-            log_base=2,
+            log_base=np.e,
             translate_x=-7,
             translate_y=-1,
             translate_z=1,
             bar_width=0.025,
-            height_clipping=4
+            height_clipping=1
         )
         scene.register("logger", logger)
 
@@ -192,7 +231,7 @@ if __name__ == "__main__":
             low_quality(path)
 
         case "medium":
-            medium_quality(path)
+            medium_quality(path, args.opacity, args.translate_x, args.translate_y, args.translate_z)
 
         case "high":
             high_quality(path)

@@ -165,4 +165,13 @@ class _BaseAudioVisualizer(Scene):
                 log_magnitudes[i] = np.mean(fft_frame[bin_mask])
         log_magnitudes /= np.max(log_magnitudes)
         return log_magnitudes
-
+    
+    def remove_outliers(self, _a: np.ndarray, z_min: Optional[float] = 3.0, noise: Optional[float]=0.25) -> np.ndarray:
+        mean = np.mean(_a)
+        stddev = np.std(_a)
+        zscores = (_a - mean) / stddev
+        
+        for idx, (val, z_score) in enumerate(zip(_a, zscores)):
+            if np.abs(z_score) > z_min:
+                _a[idx] = mean + np.random.normal(0, noise)
+        return _a
