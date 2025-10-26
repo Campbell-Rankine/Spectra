@@ -49,15 +49,16 @@ class FFT_Histogram(_BaseAudioVisualizer):
             bars = VGroup()
             for i, (count, bin) in enumerate(zip(mags, bins)):
                 exp_height = exp_transform(count, self.log_base)
-                sqrt_height = sqrt_transform(count)
-
+                sqrt_height = min(0.8*sqrt_transform(count), self.height_clipping)
                 bar = Rectangle(
                     width=self.bar_width,
                     height=max(sqrt_height, self.min_height),
                     fill_color=self.color_for_amplitude(count),
                     fill_opacity=self.opacity,
                     stroke_width=0,
-                ).move_to(((((i-1)*self.bar_width)+self.translate_x), self.translate_y, self.translate_z))
+                ).move_to(
+                    ((((i-1)*self.bar_width)+self.translate_x), self.translate_y, self.translate_z)
+                )
                 bars.add(bar)
             self.animation_counter += 1
             return bars
@@ -67,7 +68,12 @@ class FFT_Histogram(_BaseAudioVisualizer):
         self.add(bars)
 
         # === Animate over frames ===
-        self.play(curr_frame.animate.set_value(len(self.fft_frames)-1), run_time=self.samples.shape[0]/self.sample_rate, rate_func=linear)
+        self.add_sound(self.io.path, time_offset=0)
+        self.play(
+            curr_frame.animate.set_value(len(self.fft_frames)-1), 
+            run_time=self.samples.shape[0]/self.sample_rate, 
+            rate_func=linear
+        )
         self.wait()
 
 

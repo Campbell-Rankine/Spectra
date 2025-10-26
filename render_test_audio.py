@@ -5,6 +5,7 @@ from timeit import default_timer as timer
 
 from manim import config, tempconfig
 from server.client import init_logger
+from spectra.io.audio import AudioIO
 from spectra.services.render.manim_.fft_hist import FFT_Histogram
 
 # only to be used on docker
@@ -44,7 +45,8 @@ if __name__ == "__main__":
             translate_x=-7,
             translate_y=-1,
             translate_z=1,
-            bar_width=0.1
+            bar_width=0.025,
+            height_clipping=4
         )
         scene.register("logger", logger)
 
@@ -52,9 +54,6 @@ if __name__ == "__main__":
         scene.render()
 
     # attach audio to video
-
     end = timer()
     logger.info(f"Rendering Scene Took {round(end-start, 2)} seconds")
-
-    os.remove("./output/video/partial_movie_files")
     sys.exit(0)
