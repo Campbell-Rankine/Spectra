@@ -36,6 +36,10 @@ class _BaseAudioVisualizer(Scene):
         height_clipping: Optional[float] = 3.0,
         min_height: Optional[float] = 0.01,
         zoom_out: Optional[int] = 21,
+        bar_width: Optional[float]=0.15,
+        translate_x: Optional[int] = 0,
+        translate_y: Optional[int] = 0,
+        translate_z: Optional[int] = 0,
         debug: Optional[bool] = False,
         **kw,
     ):
@@ -57,6 +61,8 @@ class _BaseAudioVisualizer(Scene):
                 raise ValueError(
                     f"Invalid frequency type for max frequency={type(max_frequency)}, {max_frequency}"
                 )
+            
+        # Set animation params
         self.num_bins = num_bins
         self.log_scale = log_scale
         self.log_base = log_base
@@ -71,14 +77,18 @@ class _BaseAudioVisualizer(Scene):
         self.height_clipping = height_clipping
         self.min_height = min_height
         self.zoom_out = zoom_out
+        self.translate_x = translate_x
+        self.translate_y = translate_y
+        self.translate_z = translate_z
+        self.bar_width = bar_width
 
         self.samples, self.sample_rate = self.io.read()
         self.fft_frames, self.frequencies = self.compute_fft_frames(self.samples, self.sample_rate)
 
         # create plot axes
         self.axes = Axes(
-            x_range=[0, self.max_frequency, 1],
-            y_range=[-self.max_amplitude-1, self.max_amplitude+1, 1],
+            x_range=[0, self.num_bins*self.bar_width+2, 1],
+            y_range=[-self.max_amplitude-2, self.max_amplitude+1+2, 1],
             axis_config={"color": WHITE},
         )
 
@@ -131,9 +141,8 @@ class _BaseAudioVisualizer(Scene):
                     np.log(self.min_frequency),
                     np.log(self.max_frequency),
                     num=self.num_bins + 1,
-                    base=base,
+                    base=self.log_base,
                 )
-                * self.zoom_out
             )
             log_bin_indices = np.digitize(freqs, log_bin_edges) - 1  # Map freqs to bins
             self.log(f"Done computing bin indices", "info")

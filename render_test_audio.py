@@ -38,9 +38,13 @@ if __name__ == "__main__":
         # construct scene object
         scene = FFT_Histogram(
             path=path,
-            num_bins=1024,
+            num_bins=512,
             log_scale=True,
-            log_base=np.e,
+            log_base=2,
+            translate_x=-7,
+            translate_y=-1,
+            translate_z=1,
+            bar_width=0.1
         )
         scene.register("logger", logger)
 
