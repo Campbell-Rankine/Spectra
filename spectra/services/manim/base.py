@@ -73,7 +73,7 @@ class _BaseAudioVisualizer(Scene):
         self.hop_size = hop_size
         self.opacity = opacity
         self.spacing = spacing
-        self.colormap = cm.get_cmap("plasma")
+        self.colormap = spectra_warm.cmap
         self.downsample = downsampling
         self.height_clipping = height_clipping
         self.min_height = min_height
@@ -126,7 +126,7 @@ class _BaseAudioVisualizer(Scene):
              * np.hanning(self.chunk_size) \
             for i in range(num_frames)
         ]
-        fft_frames = [gaussian_filter(np.abs(rfft(frame), sigma=sigma)) for frame in frames]
+        fft_frames = [gaussian_filter(np.abs(rfft(frame)), sigma=sigma) for frame in frames]
         freqs = rfftfreq(self.chunk_size, d=1 / rate)
         self.log(f"Done computing fft frames", "info")
         return fft_frames, freqs

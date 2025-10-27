@@ -160,7 +160,7 @@ def medium_quality(path: str, opacity: float, translate_x, translate_y, translat
             translate_y=translate_y,
             translate_z=translate_z,
             bar_width=0.05,
-            height_clipping=1.75,
+            height_clipping=2.75,
             opacity=opacity,
         )
         scene.register("logger", logger)
